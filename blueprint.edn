@@ -1,0 +1,10 @@
+{:itonami.blueprint/id "cloud-itonami-isco-5311"
+ :itonami.blueprint/name "Independent Child Care Practice"
+ :itonami.blueprint/isco-08 "5311"
+ :itonami.blueprint/domain :care/child-care
+ :itonami.blueprint/license "AGPL-3.0-or-later"
+ :itonami.blueprint/social-impact [:child-safety :caregiver-relief :local-jobs]
+ :itonami.blueprint/governor :child-care-governor
+ :itonami.blueprint/robotics true
+ :itonami.blueprint/required-technologies [:robotics :identity :forms :dmn :bpmn :audit-ledger]
+ :itonami.blueprint/status :public-oss}
