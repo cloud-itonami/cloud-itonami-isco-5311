@@ -45,6 +45,37 @@ Resolves via [`kotoba-lang/occupation`](https://github.com/kotoba-lang/occupatio
 See [`docs/business-model.md`](docs/business-model.md) and
 [`docs/operator-guide.md`](docs/operator-guide.md).
 
+## Reference implementation
+
+`src/child_care/{store,governor}.cljc` is a minimal but real
+implementation of the Core Contract above (pure cljc, no external deps):
+
+- `child-care.store` — `Store` protocol + `MemStore`: registered
+  (guardian-consented) children (with an `allergies` set), activities,
+  incident reports. An activity/incident-report can only be recorded
+  against a registered child (child provenance).
+- `child-care.governor` — `ChildCareGovernor`: `assess` gates a proposal
+  against the child env. Hard invariants force `:hold` (no child,
+  direct-write instead of `:propose`, or a `:meal` activity for a child
+  with known `allergies` below `:high` safety-class); a meal activity
+  with allergy risk always requires `:high`+ safety-class and thus
+  `:human-approval`; **every** incident-report always escalates to
+  `:human-approval` regardless of safety-class or confidence (no
+  autonomous incident clearance); low-confidence proposals also
+  escalate.
+
+```bash
+clojure -M:test   # 8 tests, 14 assertions, green
+```
+
+This is what backs this repo's `:maturity :implemented` entry in
+[`kotoba-lang/occupation`](https://github.com/kotoba-lang/occupation) —
+the 23rd `cloud-itonami-isco-*` occupation to reach that tier, after
+`cloud-itonami-isco-6112`, `-2221`, `-7126`, `-4321`, `-9312`, `-5322`,
+`-8332`, `-1321`, `-3253`, `-6210`, `-5223`, `-7231`, `-8121`, `-9111`,
+`-2512`, `-1120`, `-4110`, `-3213`, `-5153`, `-7411`, `-2262` and
+`-4222` (ADR-2607012000).
+
 ## License
 
 AGPL-3.0-or-later.

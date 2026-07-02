@@ -1,0 +1,76 @@
+(ns child-care.governor-test
+  (:require [clojure.test :refer [deftest is testing]]
+            [child-care.store :as store]
+            [child-care.governor :as governor]))
+
+(defn- fresh-store []
+  (let [st (store/mem-store)]
+    (store/register-child! st {:child-id "child-1" :guardian-consent? true :allergies #{}})
+    (store/register-child! st {:child-id "child-2" :guardian-consent? true :allergies #{"peanuts"}})
+    st))
+
+(deftest proceeds-on-clean-play-activity
+  (let [st (fresh-store)
+        env (governor/env-for-store st)
+        proposal {:kind :activity :child-id "child-1" :category :play
+                   :safety-class :low :effect :propose :confidence 0.9}]
+    (is (= :proceed (:decision (governor/assess env proposal))))))
+
+(deftest holds-on-unregistered-child
+  (let [st (fresh-store)
+        env (governor/env-for-store st)
+        proposal {:kind :activity :child-id "no-such-child" :category :play
+                   :safety-class :low :effect :propose :confidence 0.9}
+        result (governor/assess env proposal)]
+    (is (= :hold (:decision result)))
+    (is (some #(= :no-child (:rule %)) (:violations result)))))
+
+(deftest holds-on-no-actuation-violation
+  (let [st (fresh-store)
+        env (governor/env-for-store st)
+        proposal {:kind :activity :child-id "child-1" :category :play
+                   :safety-class :low :effect :direct-write :confidence 0.9}
+        result (governor/assess env proposal)]
+    (is (= :hold (:decision result)))
+    (is (some #(= :no-actuation (:rule %)) (:violations result)))))
+
+(deftest holds-on-meal-activity-with-allergy-without-high-safety-class
+  (let [st (fresh-store)
+        env (governor/env-for-store st)
+        proposal {:kind :activity :child-id "child-2" :category :meal
+                   :safety-class :medium :effect :propose :confidence 0.9}
+        result (governor/assess env proposal)]
+    (is (= :hold (:decision result)))
+    (is (some #(= :meal-allergy-safety (:rule %)) (:violations result)))))
+
+(deftest human-approval-on-meal-activity-with-allergy-with-high-safety-class
+  (let [st (fresh-store)
+        env (governor/env-for-store st)
+        proposal {:kind :activity :child-id "child-2" :category :meal
+                   :safety-class :high :effect :propose :confidence 0.9}]
+    (is (= :human-approval (:decision (governor/assess env proposal))))))
+
+(deftest incident-report-always-escalates
+  (let [st (fresh-store)
+        env (governor/env-for-store st)
+        proposal {:kind :incident-report :child-id "child-1" :severity :low
+                   :safety-class :none :effect :propose :confidence 1.0}
+        result (governor/assess env proposal)]
+    (is (= :human-approval (:decision result)))
+    (is (= :incident-report (:reason result)))))
+
+(deftest human-approval-on-low-confidence
+  (let [st (fresh-store)
+        env (governor/env-for-store st)
+        proposal {:kind :activity :child-id "child-1" :category :outdoor
+                   :safety-class :none :effect :propose :confidence 0.2}
+        result (governor/assess env proposal)]
+    (is (= :human-approval (:decision result)))
+    (is (= :low-confidence (:reason result)))))
+
+(deftest store-records-append-only
+  (let [st (fresh-store)]
+    (store/record-activity! st {:activity-id "a1" :child-id "child-1" :category :play})
+    (store/record-incident-report! st {:report-id "r1" :child-id "child-1" :severity :low})
+    (is (= 1 (count (store/activities-of st "child-1"))))
+    (is (= 1 (count (store/incident-reports-of st "child-1"))))))
