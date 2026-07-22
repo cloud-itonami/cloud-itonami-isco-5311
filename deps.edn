@@ -1,5 +1,13 @@
 {:paths ["src"]
- :deps {}
+ :deps {;; langchain-store: the shared langchain.db store seam (EDN-blob
+        ;; codec + identity schema + event-log helpers) that ~190
+        ;; cloud-itonami actors hand-roll (ADR-2607141600);
+        ;; child-care.store's DatomicStore uses it instead of its own
+        ;; enc/dec* two-liner. :local/root resolves inside the monorepo
+        ;; checkout — a standalone fork should override it with git
+        ;; coordinates.
+        io.github.kotoba-lang/langchain-store
+        {:local/root "../../kotoba-lang/langchain-store"}}
  :aliases
  {:test {:extra-paths ["test"]
          :extra-deps {io.github.cognitect-labs/test-runner

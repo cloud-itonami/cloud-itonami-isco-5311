@@ -15,7 +15,25 @@
 
   The append-only records are the operating ledger: an activity or
   incident report must reference a registered (guardian-consented)
-  child, and these records are never mutated in place, only appended.")
+  child, and these records are never mutated in place, only appended.
+
+  Two backends implement the same `Store` protocol so the backend is a
+  swap, not a rewrite:
+
+    - `MemStore`     — atom of EDN. The deterministic default for
+                       dev/tests/demo (no deps).
+    - `DatomicStore` — backed by `langchain.db`, a Datomic-API-compatible
+                       EAV store (swappable to a kotoba-server pod in
+                       production). child/activity/incident-report
+                       entries carry free-form fields (including the
+                       `allergies` set), so each is stored as an
+                       EDN-blob payload via `langchain-store.core`
+                       (`ls/enc`/`ls/dec*`), not a hand-rolled codec
+                       (ADR-2607141600).
+
+  Both pass the same contract (test/child_care/store_contract_test.clj)."
+  (:require [langchain.db :as d]
+            [langchain-store.core :as ls]))
 
 (defprotocol Store
   (child [st child-id])
@@ -44,3 +62,43 @@
   ([] (mem-store {}))
   ([seed]
    (->MemStore (atom (merge {:children {} :activities [] :incident-reports []} seed)))))
+
+;; ----------------------------- DatomicStore (langchain.db) -----------------------------
+
+(def ^:private schema
+  (ls/identity-schema [:child/id :activity/seq :incident-report/seq]))
+
+(defn- blob-lookup
+  "Look up the EDN-blob payload for the entity uniquely identified by
+  `id-attr`/`id` and stored under `payload-attr`."
+  [conn id-attr payload-attr id]
+  (ls/dec* (d/q {:find '[?p .] :in '[$ ?id]
+                 :where [['?e id-attr '?id] ['?e payload-attr '?p]]}
+               (d/db conn) id)))
+
+(defrecord DatomicStore [conn]
+  Store
+  (child [_ child-id] (blob-lookup conn :child/id :child/payload child-id))
+  (activities-of [_ child-id]
+    (filter #(= child-id (:child-id %)) (ls/read-stream conn :activity/seq :activity/payload)))
+  (incident-reports-of [_ child-id]
+    (filter #(= child-id (:child-id %)) (ls/read-stream conn :incident-report/seq :incident-report/payload)))
+  (register-child! [s child]
+    (d/transact! conn [{:child/id (:child-id child) :child/payload (ls/enc child)}]) s)
+  (record-activity! [s activity]
+    (ls/append-blob! conn :activity/seq :activity/payload
+                     (count (ls/read-stream conn :activity/seq :activity/payload)) activity)
+    s)
+  (record-incident-report! [s incident-report]
+    (ls/append-blob! conn :incident-report/seq :incident-report/payload
+                     (count (ls/read-stream conn :incident-report/seq :incident-report/payload)) incident-report)
+    s))
+
+(defn datomic-store
+  ([] (datomic-store {}))
+  ([seed]
+   (let [s (->DatomicStore (d/create-conn schema))]
+     (doseq [[_ child] (:children seed)] (register-child! s child))
+     (doseq [activity (:activities seed)] (record-activity! s activity))
+     (doseq [incident-report (:incident-reports seed)] (record-incident-report! s incident-report))
+     s)))
