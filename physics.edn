@@ -1,0 +1,34 @@
+;; What this vertical's robot physically does, declared for
+;; kotoba.robotics.process (kotoba-lang/robotics). `kbb -M:physics` runs it.
+;;
+;; README "Robotics premise": a supervised activity-assist robot performs
+;; supply setup, activity timing and area monitoring -- always alongside,
+;; never instead of, an adult caregiver. Declared here: area monitoring --
+;; the robot stopping when a child runs in front of it (a tall, light robot
+;; on a play-room floor) -- and supply setup: an activity-supply bin moved
+;; from the storage shelf onto the children's table.
+;;
+;; Every number without a cited source is marked `estimate` in its :basis.
+;; Replacing an estimate with a sourced value is this bot's growth work.
+{:physics/schema "itonami.physical-ai.spec.v1"
+ :repo "cloud-itonami/cloud-itonami-isco-5311"
+ :cases
+ [{:id :monitoring-robot-stop
+   :kind :transport
+   :procedure "area-monitoring robot moving between play corners stops when a child runs in front of it"
+   :params {:mass-kg 25.0 :payload-kg 0.0 :distance-m 8.0 :v-max-mps 0.5 :a-max-mps2 0.3
+            :drive-force-n 60.0 :crr 0.03
+            :cog-height-m 0.55 :support-half-length-m 0.18}
+   :sweep {:param :brake-decel-mps2 :values [0.4 0.8 1.2 1.6 2.0 2.5]}
+   :quantity :min-tipover-margin
+   :limit {:min 0.4 :basis "estimate: a larger reserve than for adults-only floors, because a child may lean on or grab the robot while it stops"}
+   :boundary {:lo 0.2 :hi 4.0}}
+  {:id :supply-bin-to-table
+   :kind :manipulator
+   :procedure "arm moves an activity-supply bin from the storage shelf onto the children's table, with a caregiver present"
+   :params {:l1-m 0.40 :l2-m 0.35 :m1-kg 3.0 :m2-kg 2.0 :payload-kg 2.5
+            :from [0.30 0.50] :to [0.50 0.00] :steps 500}
+   :sweep {:param :duration-s :values [0.4 0.6 0.9 1.4 2.0]}
+   :quantity :peak-tau1-nm
+   :limit {:max 30.0 :basis "estimate: continuous shoulder torque of a ~3 kg-payload collaborative arm, kept low because children are near"}
+   :boundary {:lo 0.2 :hi 3.0}}]}
