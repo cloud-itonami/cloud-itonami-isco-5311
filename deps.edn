@@ -2,7 +2,8 @@
  :deps {
         ;; kotoba.robotics.process: the process-physics solvers and probe this
         ;; repo's physics.edn runs on (physical-AI bot, scripts/physical-ai-bots).
-        io.github.kotoba-lang/robotics {:local/root "../../kotoba-lang/robotics"}
+        io.github.kotoba-lang/robotics
+        {:local/root "../../kotoba-lang/kotoba/lib/kotoba.robotics"}
 
         ;; kotoba.test (clojure.test-compatible surface), not clojure.test --
         ;; scripts/migrate-clojure-test-to-kotoba-test.cljk. Explicit floor.
@@ -15,7 +16,7 @@
         ;; checkout — a standalone fork should override it with git
         ;; coordinates.
         io.github.kotoba-lang/langchain-store
-        {:local/root "../../kotoba-lang/langchain-store"}}
+        {:local/root "../../kotoba-lang/kotoba/lib/kotoba.langchainStore"}}
  :aliases
  {
   ;; kbb -M:physics -> the physical-AI bot's measurement: runs physics.edn on
