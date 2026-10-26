@@ -7,8 +7,10 @@
 
         ;; kotoba.test (clojure.test-compatible surface), not clojure.test --
         ;; scripts/migrate-clojure-test-to-kotoba-test.cljk. Explicit floor.
-        io.github.kotoba-lang/test {:git/url "https://github.com/kotoba-lang/test.git"
-                                    :git/sha "2ab4885f99fd25552d380d0f6b0b54c5a72eb7ae"};; langchain-store: the shared langchain.db store seam (EDN-blob
+        io.github.kotoba-lang/test
+        {:git/url "https://github.com/kotoba-lang/kotoba.git"
+         :git/sha "1f74cd29851edf11e8e6db8c7498c3086471f42b"
+         :deps/root "lib/kotoba.test"};; langchain-store: the shared langchain.db store seam (EDN-blob
         ;; codec + identity schema + event-log helpers) that ~190
         ;; cloud-itonami actors hand-roll (ADR-2607141600);
         ;; child-care.store's DatomicStore uses it instead of its own
